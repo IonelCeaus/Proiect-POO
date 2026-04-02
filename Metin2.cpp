@@ -42,7 +42,7 @@ void Pet::setCategorie(string nume, int putere, int viata) {
 
 // clasa cu care clasa Caracter are o relatie de compunere
 class Arme {
-private:
+protected:
     int pret;
     string nume;
     int nivel;
@@ -54,12 +54,12 @@ public:
     Arme(const Arme&);
     ~Arme(){};
 
-    int getPret() const {return pret;}
-    int getNivel() const {return nivel;}
-    string getNume() const {return nume;}
+    virtual int getPret() const {return pret;}
+    virtual int getNivel() const {return nivel;}
+    virtual string getNume() const {return nume;}
     string getCategorieArma() const {return categorie;}
     int getPutere() const {return putere;}
-    int getId() const {return id;}
+    virtual int getId() const {return id;}
 
     Arme& operator=(const Arme &a); // operator = de copiere
     friend ostream& operator <<(ostream&, const Arme&);
@@ -126,6 +126,87 @@ void Arme::detaliiArma(ostream &out) const {
     out << "Categorie necesara: " << categorie << endl;
 }
 
+class Armura : public Arme
+{
+private:
+    int viata;
+public:
+    Armura(int pret = 30, string nume = "Platosa", int nivel = 1, int putere = 0, string categorie = "Razboinic", int id = 1,int viata = 30);
+    Armura(const Armura&);
+
+    int getPret() const {return pret;}
+    int getNivel() const {return nivel;}
+    string getNume() const {return nume;}
+    string getCategorieArmura() const {return categorie;}
+    int getViata() const {return viata;}
+    int getId() const {return id;}
+
+    Armura& operator=(const Armura &a); // operator = de copiere
+    friend ostream& operator <<(ostream&, const Armura&);
+    friend istream& operator >>(istream&, Armura&);
+    void detaliiArmura(ostream&) const;
+
+    // operator incarcat ca functie non membra
+    friend Armura operator<(const Armura &a1, const Armura &a2) {
+        if (a1.pret < a2.pret)
+        {
+            return a1;
+        }
+        return a2;
+    }
+};
+
+Armura &Armura::operator=(const Armura &a) {
+    if (this != &a) {
+        this->pret = a.pret;
+        this->nume = a.nume;
+        this->nivel = a.nivel;
+        this->putere = a.putere;
+        this->categorie = a.categorie;
+        this->id = a.id;
+    }
+    return *this;
+}
+
+Armura::Armura(int pret, string nume, int nivel, int putere, string categorie, int id, int viata) {
+    this -> pret = pret;
+    this -> nume = nume;
+    this -> nivel = nivel;
+    this -> putere = putere;
+    this -> categorie = categorie;
+    this -> id = id;
+    this -> viata = viata;
+}
+
+Armura::Armura(const Armura& a) {
+    this->pret = a.pret;
+    this->nume = a.nume;
+    this->nivel = a.nivel;
+    this->putere = a.putere;
+    this->categorie = a.categorie;
+    this->id = a.id;
+    this->viata = a.viata;
+}
+
+ostream& operator <<(ostream& out, const Armura& a) {
+    a.detaliiArmura(out);
+    return out;
+}
+
+istream& operator >>(istream& in, Armura& a) {
+    cout << "Introdu numele armurii: ";
+    in >> a.nume;
+    return in;
+}
+
+void Armura::detaliiArmura(ostream &out) const {
+    out << "Id: " << id << endl;
+    out << "Nume: " << nume << endl;
+    out << "Pret: " << pret << endl;
+    out << "Nivel necesar: " << nivel << endl;
+    out << "+" << viata << " viata" << endl;
+    out << "Categorie necesara: " << categorie << endl;
+}
 
 // clasa principala
 class Caracter {
@@ -138,6 +219,8 @@ private:
     stareCaracter stare;
     vector<Arme> inventar; // relatie de compunere
     vector<Arme> armaEchipata;
+    vector<Armura> inventar_armuri;
+    vector<Armura> armuraEchipata;
     string nume;
     Pet *pet; // relatie de agregare
 public:
@@ -152,11 +235,16 @@ public:
     void detaliiCaracter(ostream&);
     void setNume(istream&);
     void afiseazaInventar(); // functie membra
+    void afiseazaInventarArmuri();
     bool cumparaArma(const Arme &a); // functie membra
+    bool cumparaArmura(const Armura& a);
     void echipeazaArma(const Arme &a); // funtie membra
+    void echipeazaArmura(const Armura& a);
     int getBani() const {return bani;}
     int getInventar() const {return inventar.size();}
+    int getInventarArmuri() const {return inventar_armuri.size();}
     Arme alegeArma();
+    Armura alegeArmura();
     Pet *getPet() {return pet;}
 
     // operator ca functie membra
@@ -232,6 +320,18 @@ void Caracter::afiseazaInventar() {
     }
 }
 
+void Caracter::afiseazaInventarArmuri() {
+    cout << "Inventar: \n";
+    if (inventar_armuri.size() == 0) {
+        cout << "Inventarul este gol!\n";
+    }
+    else {
+        for (int i = 0; i < inventar_armuri.size(); i++) {
+            cout << inventar_armuri[i];
+        }
+    }
+}
+
 void Caracter::detaliiCaracter(ostream& out) {
     out << "Nume: " << nume << endl;
     out << "Categorie: " << categorie << endl;
@@ -266,6 +366,25 @@ bool Caracter::cumparaArma(const Arme &a) {
     return true;
 }
 
+bool Caracter::cumparaArmura(const Armura& a) {
+    if (this -> bani < a.getPret()) {
+        cout << "Nu ai bani!\n";
+        return false;
+    }
+    if (this -> nivel < a.getNivel()) {
+        cout << "Nu ai nivelul necesar! \n";
+        return false;
+    }
+    if (this -> categorie != a.getCategorieArmura()) {
+        cout << "Aceasta arma nu este de categoria ta! \n";
+        return false;
+    }
+    this -> bani -= a.getPret();
+    inventar_armuri.push_back(a);
+    cout << "Ai cumaparat " << a.getNume() << " !\n";
+    return true;
+}
+
 void Caracter::echipeazaArma(const Arme &a) {
     if (inventar.size() == 0) {
         cout << "Nu ai ce sa echipezi!\n";
@@ -277,6 +396,23 @@ void Caracter::echipeazaArma(const Arme &a) {
         for (vector<Arme>::iterator i = inventar.begin(); i != inventar.end(); i++) {
             if (i->getNume() == a.getNume()) {
                 inventar.erase(i);
+                break;
+            }
+        }
+    }
+}
+
+void Caracter::echipeazaArmura(const Armura& a) {
+    if (inventar_armuri.size() == 0) {
+        cout << "Nu ai ce sa echipezi!\n";
+    }
+    else {
+        armuraEchipata.push_back(a);
+        this -> viata += a.getViata();
+        cout << "Ai echipat " << a.getNume() << "si ti-a crescut viata cu " << a.getViata() << " !\n";
+        for (vector<Armura>::iterator i = inventar_armuri.begin(); i != inventar_armuri.end(); i++) {
+            if (i -> getNume() == a.getNume()) {
+                inventar_armuri.erase(i);
                 break;
             }
         }
@@ -295,6 +431,17 @@ Arme Caracter::alegeArma() {
     return inventar[id-1];
 }
 
+Armura Caracter::alegeArmura() {
+    cout << "Ce arumra echipezi?\n";
+    int id;
+    for (int i = 0; i < inventar_armuri.size(); i++) {
+        cout << i+1 << ". " << inventar_armuri[i] << endl;
+    }
+    cout << "Ce arumra echipezi?\n";
+    cout << "Alege: ";
+    cin >> id;
+    return inventar_armuri[id-1];
+}
 
 // clasa magazin (mai am de adaugat si armuri da e la fel ca la arme doar ca creste viata ci nu puterea)
 class Magazin { // Reminder: sa fac o functie de unde pot cumpara licori de viata pentru a creste viata cand ies din arena
@@ -318,6 +465,7 @@ void Magazin::adaugaArme() {
     inventar.push_back(Arme(40,"Sulita",1,20,"Razboinic",2));
     inventar.push_back(Arme(30,"Cutit",1,25,"Ninja",3));
     inventar.push_back(Arme(40,"Arc",1,30,"Ninja",4));
+    inventar.push_back(Armura(30,"Platosa",1,0,"Razboinic",5,30));
 }
 
 void Magazin::stergeArme() {
@@ -385,12 +533,17 @@ void meniu () {
         switch (opt) {
             case 1:
                     // se afiseaza inventarul si detalii
-                    int alg;
+                    int alg,alg1;
                     cout << "Pentru inventar apasa 1 | Pentru detalii apasa 2\n";
                     cout << "Alegere: ";
                     cin >> alg;
                     if (alg == 1) {
-                        erou.afiseazaInventar();
+                        cout << "Arme tasta 1 | Armuri tasta 2\n";
+                        cout << "Alegere: ";
+                        cin >> alg1;
+                        if (alg1 == 1) erou.afiseazaInventar();
+                        else if (alg1 == 2) erou.afiseazaInventarArmuri();
+                        else cout << "Invalid!\n";
                     }
                     else if (alg == 2) {
                         erou.detaliiCaracter(cout);
@@ -423,27 +576,55 @@ void meniu () {
                             }
                         }
                     }
+                    bool cumpara;
                     cout << "Totalul este " << cos << " bani!\n";
                     if (erou.getBani() < cos) {
                         cout << "Nu ai bani suficienti!\n";
                     }
                     else {
                         for (int i = 0; i < optiuni.size(); i++) {
-                            erou.cumparaArma(optiuni[i]);
+                            cumpara = erou.cumparaArma(optiuni[i]);
                         }
-                        cout << "Armele au fost adaugate in inventar!\n";
+                        if (cumpara) {
+                            if (optiuni.size() == 1) {
+                                cout << "Arma a fost adaugata in inventar!\n";
+                            }
+                            else {
+                                cout << "Armele au fost adaugate in inventar!\n";
+                            }
+                        }
                     }
                         magazin.stergeArme();
                     break;
                 }
             case 3: {
-                    // echipare arma ( se sterge din inventar si se echiepeaza, trb sa mai fac o functie sa si dezechipez sau sa inlocuiesc daca vr)
-                    Arme arma = erou.alegeArma();
-                    if (erou.getInventar() == 0) {
-                        cout << "Nu ai arme!\n";
+                    int echip;
+                    cout << "Ce vrei sa echipezi?\n";
+                    cout << "Arma [Tasta 1] | Armura [Tasta 2] \n";
+                    cout << "Optiune: ";
+                    cin >> echip;
+                    if (echip == 1) {
+                        // echipare arma ( se sterge din inventar si se echiepeaza, trb sa mai fac o functie sa si dezechipez sau sa inlocuiesc daca vr)
+                        Arme arma = erou.alegeArma();
+                        if (erou.getInventar() == 0) {
+                            cout << "Nu ai arme!\n";
+                        }
+                        else {
+                            erou.echipeazaArma(arma);
+                        }
+                    }
+                    else if (echip == 2)
+                    {
+                        Armura armura = erou.alegeArmura();
+                        if (erou.getInventarArmuri() == 0) {
+                            cout << "Nu ai armuri!\n";
+                        }
+                        else {
+                            erou.echipeazaArmura(armura);
+                        }
                     }
                     else {
-                        erou.echipeazaArma(arma);
+                        cout << "Optiune invalida!\n";
                     }
                     break;
                 }
@@ -508,7 +689,6 @@ int alegeCaracter() {
     return op;
 }
 int main() {
-
     meniu();
     return 0;
 }
