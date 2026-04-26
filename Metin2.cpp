@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <stack>
+#include <random>
 
 using namespace std;
 
@@ -11,6 +12,18 @@ int alegeCaracter(); // functie declarata pt ca imi dadea eroare
 enum stareCaracter {
     Mort = 0,
     Viu = 1
+};
+
+class BugetInsuficientException : public exception {
+    virtual const char* what() const noexcept {
+        return "Nu ai bani!\n";
+    }
+};
+
+class NivelMicException : public exception {
+    virtual const char* what() const noexcept {
+        return "Nu ai nivel necesar!\n";
+    }
 };
 
 //clasa cu care Clasa caracter are o relatie de agregare
@@ -217,7 +230,7 @@ private:
     string categorie;
     int viata;
     int putere;
-    stareCaracter stare;
+    int stare;
     vector<Arme> inventar; // relatie de compunere
     vector<Arme> armaEchipata;
     vector<Armura> inventar_armuri;
@@ -226,7 +239,7 @@ private:
     Pet *pet; // relatie de agregare
 public:
     // constructor de initializare
-    Caracter(string categorie = "N/A", int viata = 100, int putere = 20, int nivel = 1, int bani = 100, stareCaracter stare = Viu, vector<Arme> inventar = {}, vector<Arme> armaEchipata = {}, string nume = "N/A", Pet *pet = nullptr);
+    Caracter(string categorie = "N/A", int viata = 100, int putere = 20, int nivel = 1, int bani = 100, int stare = 1, vector<Arme> inventar = {}, vector<Arme> armaEchipata = {}, string nume = "N/A", Pet *pet = nullptr);
     Caracter(const Caracter&); // constructor de copiere
     ~Caracter(){}; // destructor
 
@@ -244,9 +257,17 @@ public:
     int getBani() const {return bani;}
     int getInventar() const {return inventar.size();}
     int getInventarArmuri() const {return inventar_armuri.size();}
+    int getViata() const {return viata;}
+    int getStare() const {return stare;}
+    int getPutere() const {return putere;}
+    int getNivel() const {return nivel;}
+    void setStare(int stare) {this -> stare = stare;}
+    void setNivel(int nivel) {this -> nivel += nivel;}
+    int DMG() const {return putere - nivel;}
     Arme alegeArma();
     Armura alegeArmura();
     Pet *getPet() {return pet;}
+
 
     // operator ca functie membra
     void operator +=(int suma) {
@@ -255,11 +276,17 @@ public:
         cout << "Bani actuali: " << this -> bani << endl;
     }
 
+    void operator -= (int hp) {
+        this -> viata -= hp;
+        cout << "Ai pierdut " << viata << " hp! \n";
+        cout << "HP actual: " << this -> viata << endl;
+    }
+
     friend ostream& operator <<(ostream&, Caracter&); // operator pentru afisare
     friend istream& operator >>(istream&, Caracter&); // operator pentru citire
 };
 
-Caracter::Caracter(string categorie, int viata, int putere, int nivel, int bani, stareCaracter stare, vector<Arme> inventar, vector<Arme> armaEchipata, string nume, Pet *pet) {
+Caracter::Caracter(string categorie, int viata, int putere, int nivel, int bani, int stare, vector<Arme> inventar, vector<Arme> armaEchipata, string nume, Pet *pet) {
     this -> categorie = categorie;
     this -> viata = viata;
     this -> putere = putere;
@@ -542,14 +569,20 @@ protected:
     int putere;
     int bani;
 public:
-    Monstru(string nume,int viata,int nivel,int putere,int bani):nume(nume),viata(viata),nivel(nivel),putere(putere),bani(bani){}
+    Monstru(string nume = "Monstru",int viata = 50,int nivel = 1,int putere = 20,int bani = 20):nume(nume),viata(viata),nivel(nivel),putere(putere),bani(bani){}
     Monstru(const Monstru&);
-    ~Monstru();
+    virtual ~Monstru(){};
     int getViata() const {return viata;}
     int getNivel() const {return nivel;}
     int getBani() const {return bani;}
 
     virtual int DMG() const {return putere + nivel;}
+    virtual void abilitateSpeciala() {cout << "Nu face nimic\n";}
+
+    void operator -= (int hp) {
+        this -> viata -= hp;
+        cout << "Monstrul a pierut " << viata << " hp! \n";
+    }
 };
 
 class MonstruFoc : public Monstru
@@ -557,9 +590,11 @@ class MonstruFoc : public Monstru
 private:
     vector<Arme> loot;
 public:
-    MonstruFoc(string nume, int viata, int nivel, int putere, int bani,vector<Arme> loot):Monstru(nume,viata,nivel,putere,bani),loot(loot){}
+    MonstruFoc(string nume = "Monstru foc", int viata = 100, int nivel = 5, int putere = 20, int bani = 40, vector<Arme> loot = {}):Monstru(nume,viata,nivel,putere,bani),loot(loot){}
+    ~MonstruFoc(){};
     void setLoot();
     int DMG() const {return putere + nivel;}
+    void abilitateSpeciala() {putere += 10;}
 };
 
 void MonstruFoc::setLoot() {
@@ -594,6 +629,11 @@ void meniu () {
     Magazin magazinArme;
     MagazinArmuri magazinArmuri;
     Pet p;
+    Monstru monstru;
+    MonstruFoc monstruF;
+    stack<Monstru*> Dungeon;
+    Dungeon.push(&monstruF);
+    Dungeon.push(&monstru);
     // alegerea caracterului
     if (ac == 1) {
         cout << "Ai ales Razboinic! \n";
@@ -606,7 +646,7 @@ void meniu () {
     // setare nume pentru a folosi operatoul >> de citire
     cout << "Pune un nume caracterului!\n";
     erou.setNume(cin);
-    while(stop == false) {
+    while(stop == false && erou.getStare() == 1) {
         uiMeniu();
         cout<<"Alege ce sa faci: ";
         cin>>opt;
@@ -673,21 +713,26 @@ void meniu () {
                         }
                         bool cumpara;
                         cout << "Totalul este " << cos << " bani!\n";
-                        if (erou.getBani() < cos) {
-                            cout << "Nu ai bani suficienti!\n";
+                        try
+                        {
+                            if (erou.getBani() >= cos) {
+                                for (int i = 0; i < optiuni.size(); i++) {
+                                    cumpara = erou.cumparaArma(optiuni[i]);
+                                }
+                                if (cumpara) {
+                                    if (optiuni.size() == 1) {
+                                        cout << "Arma a fost adaugata in inventar!\n";
+                                    }
+                                    else {
+                                        cout << "Armele au fost adaugate in inventar!\n";
+                                    }
+                                }
+                            }
+                            else throw BugetInsuficientException();
                         }
-                        else {
-                            for (int i = 0; i < optiuni.size(); i++) {
-                                cumpara = erou.cumparaArma(optiuni[i]);
-                            }
-                            if (cumpara) {
-                                if (optiuni.size() == 1) {
-                                    cout << "Arma a fost adaugata in inventar!\n";
-                                }
-                                else {
-                                    cout << "Armele au fost adaugate in inventar!\n";
-                                }
-                            }
+                        catch (exception& e)
+                        {
+                            cout << e.what();
                         }
                         magazinArme.sterge();
                     }
@@ -717,21 +762,26 @@ void meniu () {
                         }
                         bool cumpara;
                         cout << "Totalul este " << cos << " bani!\n";
-                        if (erou.getBani() < cos) {
-                            cout << "Nu ai bani suficienti!\n";
+                        try
+                        {
+                            if (erou.getBani() >= cos) {
+                                for (int i = 0; i < optiuni.size(); i++) {
+                                    cumpara = erou.cumparaArmura(optiuni[i]);
+                                }
+                                if (cumpara) {
+                                    if (optiuni.size() == 1) {
+                                        cout << "Armura a fost adaugata in inventar!\n";
+                                    }
+                                    else {
+                                        cout << "Armurile au fost adaugate in inventar!\n";
+                                    }
+                                }
+                            }
+                            else throw BugetInsuficientException();
                         }
-                        else {
-                            for (int i = 0; i < optiuni.size(); i++) {
-                                cumpara = erou.cumparaArmura(optiuni[i]);
-                            }
-                            if (cumpara) {
-                                if (optiuni.size() == 1) {
-                                    cout << "Armura a fost adaugata in inventar!\n";
-                                }
-                                else {
-                                    cout << "Armurile au fost adaugate in inventar!\n";
-                                }
-                            }
+                        catch (exception& e)
+                        {
+                            cout << e.what();
                         }
                         magazinArmuri.sterge();
                     }
@@ -796,7 +846,74 @@ void meniu () {
                     break;
             }
             case 5:
-                // aici inca nu am facut nimic dar vr sa fac o arena unde mai scade viata mai primim bani
+                {
+                    cout << "Bun venit in Dungeon!" << endl;
+                    bool cont = true;
+                    while (cont)
+                    {
+                        cout << "In ce camera vrei sa cobori?\n";
+                        cout << "[Monstru(Tasta 1) | MonstruFoc(Tasta 2) | MonstruGheata(Tasta 3) | FinalBoss(Tasta 4) | Nu intri (Tasta >=5)] \n";
+                        int asdf;
+                        cout << "Alegerea ta: ";
+                        cin >> asdf;
+                        if (asdf == 1) {
+                            try
+                            {
+                                int niv = erou.getNivel();
+                                Monstru* verif = Dungeon.top();
+                                if (niv >= verif->getNivel()) {
+                                    while (erou.getViata() > 0 && verif->getViata() > 0) {
+                                        erou -= verif->DMG();
+                                        verif -= erou.DMG();
+                                    }
+                                    erou += verif->getBani();
+                                    erou.setNivel(verif->getNivel());
+                                }
+                                else throw NivelMicException();
+                            }
+                            catch (exception& e) {
+                                cout << e.what();
+                            }
+                        }
+                        else if (asdf == 2)
+                        {
+                            Dungeon.pop();
+                            try
+                            {
+                                int niv = erou.getNivel();
+                                random_device rd;
+                                mt19937 gen(rd());
+                                uniform_int_distribution<> distr(1,10);
+                                int nrRandom = distr(gen);
+                                Monstru* verif = Dungeon.top();
+                                if (niv >= verif->getNivel()) {
+                                    while (erou.getViata() > 0 && verif->getViata() > 0)
+                                    {
+                                        if (nrRandom > 7) verif->abilitateSpeciala();
+                                        erou -= verif->DMG();
+                                        verif -= erou.DMG();
+                                    }
+                                    if (erou.getViata() > 0) {
+                                        erou += verif->getBani();
+                                        erou.setNivel(verif->getNivel());
+                                    }
+                                    else
+                                    {
+                                        erou.setStare(Mort);
+                                    }
+                                }
+                                else throw NivelMicException();
+                            }
+                            catch (exception& e) {
+                                cout << e.what();
+                            }
+                        }
+                        else {
+                            cout << "Revii cand ai tupeu!\n";
+                            cont = false;
+                        }
+                    }
+                }
                 break;
             case 0:
                 //iesirea
