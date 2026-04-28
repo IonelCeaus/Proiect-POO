@@ -254,6 +254,7 @@ public:
     bool cumparaArmura(const Armura& a);
     void echipeazaArma(const Arme &a); // funtie membra
     void echipeazaArmura(const Armura& a);
+    string getCategorie() const {return categorie;}
     int getBani() const {return bani;}
     int getInventar() const {return inventar.size();}
     int getInventarArmuri() const {return inventar_armuri.size();}
@@ -272,13 +273,13 @@ public:
     // operator ca functie membra
     void operator +=(int suma) {
         this -> bani += suma;
-        cout << "Ai primit " << suma << " !\n";
+        cout << "Ai primit " << suma << " bani !\n";
         cout << "Bani actuali: " << this -> bani << endl;
     }
 
     void operator -= (int hp) {
         this -> viata -= hp;
-        cout << "Ai pierdut " << viata << " hp! \n";
+        cout << "Ai pierdut " << hp << " hp! \n";
         cout << "HP actual: " << this -> viata << endl;
     }
 
@@ -575,15 +576,24 @@ public:
     int getViata() const {return viata;}
     int getNivel() const {return nivel;}
     int getBani() const {return bani;}
+    int getPutere() const {return putere;}
 
+    virtual void set(string nume,int viata,int nivel);
     virtual int DMG() const {return putere + nivel;}
-    virtual void abilitateSpeciala() {cout << "Nu face nimic\n";}
-
+    virtual void abilitateSpeciala() {}
+    virtual void setLoot(Caracter& c) {}
     void operator -= (int hp) {
         this -> viata -= hp;
-        cout << "Monstrul a pierut " << viata << " hp! \n";
+        cout << "Monstrul a pierut " << hp << " hp! \n";
+        cout << "Viata monstrului: " << viata << " !\n";
     }
 };
+
+void Monstru::set(string nume, int viata, int nivel) {
+    this -> nume = nume;
+    this -> viata = viata;
+    this -> nivel = nivel;
+}
 
 class MonstruFoc : public Monstru
 {
@@ -592,14 +602,14 @@ private:
 public:
     MonstruFoc(string nume = "Monstru foc", int viata = 100, int nivel = 5, int putere = 20, int bani = 40, vector<Arme> loot = {}):Monstru(nume,viata,nivel,putere,bani),loot(loot){}
     ~MonstruFoc(){};
-    void setLoot();
-    int DMG() const {return putere + nivel;}
+    void setLoot(Caracter& c);
+    int DMG() const {return putere + nivel * 2;}
     void abilitateSpeciala() {putere += 10;}
 };
 
-void MonstruFoc::setLoot() {
-    loot.push_back(Arme(30,"Sabie",1,15,"Razboinic",1));
-    loot.push_back(Arme(30,"Cutit",1,25,"Ninja",3));
+void MonstruFoc::setLoot(Caracter& c) {
+    if (c.getCategorie() == "Razboinic")    loot.push_back(Arme(30,"Sabie",1,15,"Razboinic",1));
+    else if (c.getCategorie() == "Ninja")   loot.push_back(Arme(30,"Cutit",1,25,"Ninja",3));
 }
 
 void uiMeniuStart() {
@@ -629,11 +639,12 @@ void meniu () {
     Magazin magazinArme;
     MagazinArmuri magazinArmuri;
     Pet p;
-    Monstru monstru;
-    MonstruFoc monstruF;
+    Monstru monstru("Goblin");
+    MonstruFoc monstruF("Dragon");
     stack<Monstru*> Dungeon;
-    Dungeon.push(&monstruF);
-    Dungeon.push(&monstru);
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> distr(1,10);
     // alegerea caracterului
     if (ac == 1) {
         cout << "Ai ales Razboinic! \n";
@@ -849,56 +860,36 @@ void meniu () {
                 {
                     cout << "Bun venit in Dungeon!" << endl;
                     bool cont = true;
-                    while (cont)
+                    Dungeon.push(&monstruF);
+                    Dungeon.push(&monstru);
+                    while (cont && erou.getStare() == Viu)
                     {
-                        cout << "In ce camera vrei sa cobori?\n";
-                        cout << "[Monstru(Tasta 1) | MonstruFoc(Tasta 2) | MonstruGheata(Tasta 3) | FinalBoss(Tasta 4) | Nu intri (Tasta >=5)] \n";
+                        cout << "Continui?\n";
+                        cout << "Da [Tasta 1] | Nu [Tasta 2] \n";
                         int asdf;
                         cout << "Alegerea ta: ";
                         cin >> asdf;
                         if (asdf == 1) {
+                            if (Dungeon.empty()) {
+                                cout << "Ai terminat jocul. Felicitari!!!\n";
+                                cont = false;
+                                continue;
+                            }
+                            Monstru* verif = Dungeon.top();
                             try
                             {
                                 int niv = erou.getNivel();
-                                Monstru* verif = Dungeon.top();
+                                verif->setLoot(erou);
                                 if (niv >= verif->getNivel()) {
-                                    while (erou.getViata() > 0 && verif->getViata() > 0) {
-                                        erou -= verif->DMG();
-                                        verif -= erou.DMG();
-                                    }
-                                    erou += verif->getBani();
-                                    erou.setNivel(verif->getNivel());
-                                }
-                                else throw NivelMicException();
-                            }
-                            catch (exception& e) {
-                                cout << e.what();
-                            }
-                        }
-                        else if (asdf == 2)
-                        {
-                            Dungeon.pop();
-                            try
-                            {
-                                int niv = erou.getNivel();
-                                random_device rd;
-                                mt19937 gen(rd());
-                                uniform_int_distribution<> distr(1,10);
-                                int nrRandom = distr(gen);
-                                Monstru* verif = Dungeon.top();
-                                if (niv >= verif->getNivel()) {
-                                    while (erou.getViata() > 0 && verif->getViata() > 0)
-                                    {
-                                        if (nrRandom > 7) verif->abilitateSpeciala();
-                                        erou -= verif->DMG();
-                                        verif -= erou.DMG();
-                                    }
-                                    if (erou.getViata() > 0) {
+                                    if (erou.getPutere() > verif->getPutere() && erou.getViata() > verif->getViata()) {
                                         erou += verif->getBani();
-                                        erou.setNivel(verif->getNivel());
+                                        erou.setNivel(1);
+                                        cout << "Felicitari! Ai trecut nivelul " << erou.getNivel() << " !\n";
+                                        Dungeon.pop();
                                     }
                                     else
                                     {
+                                        cout << "Ai murit!\n";
                                         erou.setStare(Mort);
                                     }
                                 }
@@ -908,7 +899,8 @@ void meniu () {
                                 cout << e.what();
                             }
                         }
-                        else {
+                        else if (asdf == 2)
+                        {
                             cout << "Revii cand ai tupeu!\n";
                             cont = false;
                         }
