@@ -52,7 +52,20 @@ void Pet::setCategorie(string nume, int putere, int viata) {
     this -> putere = putere;
     this -> viata = viata;
 }
+// asta va fi clasa de baza pentru arme si armuri;
+class Item {
+protected:
+    static int contorId;
+    const int id;
+    string nume;
+    int nivel;
+    string categorie;
+public:
+    Item(string nume,int nivel,string categorie) : id(++contorId), nume(nume), nivel(nivel), categorie(categorie){}
+    virtual ~Item(){}
+};
 
+int Item::contorId = 0;
 
 // clasa cu care clasa Caracter are o relatie de compunere
 class Arme {
@@ -570,7 +583,7 @@ protected:
     int putere;
     int bani;
 public:
-    Monstru(string nume = "Monstru",int viata = 50,int nivel = 1,int putere = 20,int bani = 20):nume(nume),viata(viata),nivel(nivel),putere(putere),bani(bani){}
+    Monstru(string nume = "Monstru",int viata = 150,int nivel = 1,int putere = 20,int bani = 20):nume(nume),viata(viata),nivel(nivel),putere(putere),bani(bani){}
     Monstru(const Monstru&);
     virtual ~Monstru(){};
     int getViata() const {return viata;}
@@ -587,6 +600,7 @@ public:
         cout << "Monstrul a pierut " << hp << " hp! \n";
         cout << "Viata monstrului: " << viata << " !\n";
     }
+    virtual string getLoot() const {return "nimic";}
 };
 
 void Monstru::set(string nume, int viata, int nivel) {
@@ -604,12 +618,37 @@ public:
     ~MonstruFoc(){};
     void setLoot(Caracter& c);
     int DMG() const {return putere + nivel * 2;}
-    void abilitateSpeciala() {putere += 10;}
+    void abilitateSpeciala() {
+        putere += 30;
+        cout << "Puterea monstrului a crescut cu 30";
+    }
+    string getLoot() const {return loot[0].getNume();}
 };
 
 void MonstruFoc::setLoot(Caracter& c) {
     if (c.getCategorie() == "Razboinic")    loot.push_back(Arme(30,"Sabie",1,15,"Razboinic",1));
     else if (c.getCategorie() == "Ninja")   loot.push_back(Arme(30,"Cutit",1,25,"Ninja",3));
+}
+
+class MonstruGheata : public Monstru
+{
+private:
+    vector<Armura> loot;
+public:
+    MonstruGheata(string nume = "Monstru gheata", int viata = 150, int nivel = 10, int putere = 50, int bani = 80, vector<Armura> loot = {}):Monstru(nume,viata,nivel,putere,bani),loot(loot){}
+    ~MonstruGheata(){};
+    void setLoot(Caracter& c);
+    int DMG() const {return putere + nivel * 4;}
+    void abilitateSpeciala() {
+        viata += 30;
+        cout << "Viata monstrului a crescut cu 30";
+    }
+    string getLoot() const {return loot[0].getNume();}
+};
+
+void MonstruGheata::setLoot(Caracter& c) {
+    if (c.getCategorie() == "Razboinic")    loot.push_back(Armura(30,"Platosa",1,0,"Razboinic",1,30));
+    else if (c.getCategorie() == "Ninja")   loot.push_back(Armura(30,"Costum Ninja",1,0,"Ninja",3,40));
 }
 
 void uiMeniuStart() {
@@ -641,6 +680,7 @@ void meniu () {
     Pet p;
     Monstru monstru("Goblin");
     MonstruFoc monstruF("Dragon");
+    MonstruGheata monstruG("Golem");
     stack<Monstru*> Dungeon;
     random_device rd;
     mt19937 gen(rd());
@@ -860,6 +900,7 @@ void meniu () {
                 {
                     cout << "Bun venit in Dungeon!" << endl;
                     bool cont = true;
+                    Dungeon.push(&monstruG);
                     Dungeon.push(&monstruF);
                     Dungeon.push(&monstru);
                     while (cont && erou.getStare() == Viu)
@@ -875,33 +916,63 @@ void meniu () {
                                 cont = false;
                                 continue;
                             }
-                            Monstru* verif = Dungeon.top();
+                            cout << "Ai intrat in camera " << 5 - Dungeon.size() << " !\n";
+                            Monstru* m = Dungeon.top();
                             try
                             {
                                 int niv = erou.getNivel();
-                                verif->setLoot(erou);
-                                if (niv >= verif->getNivel()) {
-                                    if (erou.getPutere() > verif->getPutere() && erou.getViata() > verif->getViata()) {
-                                        erou += verif->getBani();
+                                if (typeid(*m) == typeid(MonstruFoc))
+                                    m->setLoot(erou);
+                                if (niv >= m->getNivel()) {
+                                    while (true) {
+                                        int nrRandom = distr(gen);
+                                        cout << "Ataci [Tasta 1] sau fugi [Tasta 2] ?\n";
+                                        int a;
+                                        cout << "Alegerea ta: ";
+                                        cin >> a;
+                                        if (a == 1) {
+                                            if (m -> getViata() > 0 && erou.getViata() > 0) *m -= erou.DMG();
+                                            else break;
+                                        }
+                                        else if (a == 2) {
+                                            asdf = 2;
+                                            break;
+                                        }
+                                        cout << nrRandom << endl;
+                                        if (nrRandom > 17) m -> abilitateSpeciala();
+                                        if (erou.getViata() > 0 && m -> getViata() > 0) erou -= m -> DMG();
+                                        else break;
+                                    }
+                                    if (erou.getViata() > 0 and m -> getViata() <= 0)
+                                    {
+                                        cout << "Felicitari ai castigat in camera " << 5 - Dungeon.size() << " !\n";
+                                        erou += m->getBani();
                                         erou.setNivel(1);
-                                        cout << "Felicitari! Ai trecut nivelul " << erou.getNivel() << " !\n";
+                                        cout << "Ai trecut la nivelul " << erou.getNivel() << " !\n";
+                                        if (typeid(*m) == typeid(MonstruFoc))
+                                        {
+                                            cout << "Ai primit " << m -> getLoot() << " !\n";
+                                            // cand o sa fac inventarul sa nu uit sa adaug arma primita in inventar!!;
+                                        }
                                         Dungeon.pop();
                                     }
-                                    else
-                                    {
-                                        cout << "Ai murit!\n";
-                                        erou.setStare(Mort);
-                                    }
+                                    if (erou.getViata() <= 0) erou.setStare(Mort);
                                 }
                                 else throw NivelMicException();
                             }
                             catch (exception& e) {
                                 cout << e.what();
+                                asdf = 3;
                             }
                         }
-                        else if (asdf == 2)
+                        if (asdf == 2)
                         {
                             cout << "Revii cand ai tupeu!\n";
+                            cont = false;
+                        }
+                        if (asdf == 3)
+                        {
+                            cout << "Trebuie sa refaci camera curenta pana ai nivelul necesar!\n";
                             cont = false;
                         }
                     }
