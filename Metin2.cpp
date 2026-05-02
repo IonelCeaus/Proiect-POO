@@ -57,36 +57,58 @@ class Item {
 protected:
     static int contorId;
     const int id;
+    int pret;
     string nume;
     int nivel;
     string categorie;
 public:
-    Item(string nume,int nivel,string categorie) : id(++contorId), nume(nume), nivel(nivel), categorie(categorie){}
-    virtual ~Item(){}
+    Item(int pret, string nume, int nivel, string categorie) : id(++contorId), pret(pret), nume(nume), nivel(nivel), categorie(categorie){}
+    Item(const Item& a) : id(a.id), pret(a.pret), nume(a.nume), nivel(a.nivel), categorie(a.categorie) {}
+    virtual ~Item() = 0;
+
+    virtual Item* clona() const = 0;
+    int getPret() const {return pret;}
+    int getNivel() const {return nivel;}
+    string getNume() const {return nume;}
+    string getCategorie() const {return categorie;}
+    int getId() const {return id;}
+
+    friend ostream& operator <<(ostream&, const Item&);
+    void detaliiItem(ostream&) const;
+
 };
 
 int Item::contorId = 0;
 
+Item::~Item() {}
+
+ostream& operator <<(ostream& out, const Item& a) {
+    a.detaliiItem(out);
+    return out;
+}
+
+void Item::detaliiItem(ostream &out) const {
+    out << "Id: " << id << endl;
+    out << "Nume: " << nume << endl;
+    out << "Pret: " << pret << endl;
+    out << "Nivel necesar: " << nivel << endl;
+    out << "Categorie necesara: " << categorie << endl;
+}
+
 // clasa cu care clasa Caracter are o relatie de compunere
-class Arme {
+class Arme : public Item{
 protected:
-    int pret;
-    string nume;
-    int nivel;
     int putere;
-    string categorie;
-    int id;
 public:
-    Arme(int pret = 30, string nume = "Sabie", int nivel = 1, int putere = 30, string categorie = "Razboinic", int id = 1);
-    Arme(const Arme&);
+    Arme(int pret = 30, string nume = "Sabie", int nivel = 1, string categorie = "Razboinic", int putere = 30) : Item(pret, nume, nivel, categorie), putere(putere){}
+    Arme(const Arme& a) : Item(a), putere(a.putere) {}
     ~Arme(){};
 
-    virtual int getPret() const {return pret;}
-    virtual int getNivel() const {return nivel;}
-    virtual string getNume() const {return nume;}
-    string getCategorieArma() const {return categorie;}
+    Item* clona() const
+    {
+        return new Arme(*this);
+    }
     int getPutere() const {return putere;}
-    virtual int getId() const {return id;}
 
     Arme& operator=(const Arme &a); // operator = de copiere
     friend ostream& operator <<(ostream&, const Arme&);
@@ -110,27 +132,8 @@ Arme &Arme::operator=(const Arme &a) {
         this->nivel = a.nivel;
         this->putere = a.putere;
         this->categorie = a.categorie;
-        this->id = a.id;
     }
     return *this;
-}
-
-Arme::Arme(int pret, string nume, int nivel, int putere, string categorie, int id) {
-    this -> pret = pret;
-    this -> nume = nume;
-    this -> nivel = nivel;
-    this -> putere = putere;
-    this -> categorie = categorie;
-    this -> id = id;
-}
-
-Arme::Arme(const Arme& a) {
-    this->pret = a.pret;
-    this->nume = a.nume;
-    this->nivel = a.nivel;
-    this->putere = a.putere;
-    this->categorie = a.categorie;
-    this->id = a.id;
 }
 
 ostream& operator <<(ostream& out, const Arme& a) {
@@ -145,29 +148,25 @@ istream& operator >>(istream& in, Arme& a) {
 }
 
 void Arme::detaliiArma(ostream &out) const {
-    out << "Id: " << id << endl;
-    out << "Nume: " << nume << endl;
-    out << "Pret: " << pret << endl;
-    out << "Nivel necesar: " << nivel << endl;
+    Item::detaliiItem(out);
     out << "+" << putere << " putere" << endl;
-    out << "Categorie necesara: " << categorie << endl;
 }
 
-class Armura : public Arme
+class Armura : public Item
 {
 private:
     int viata;
 public:
-    Armura(int pret = 30, string nume = "Platosa", int nivel = 1, int putere = 0, string categorie = "Razboinic", int id = 1,int viata = 30);
-    Armura(const Armura&);
+    Armura(int pret = 30, string nume = "Platosa", int nivel = 1, string categorie = "Razboinic", int viata = 30) : Item(pret, nume, nivel, categorie), viata(viata) {}
+    Armura(const Armura& a) : Item(a), viata(a.viata) {}
+    ~Armura() {}
 
-    int getPret() const {return pret;}
-    int getNivel() const {return nivel;}
-    string getNume() const {return nume;}
-    string getCategorieArmura() const {return categorie;}
     int getViata() const {return viata;}
-    int getId() const {return id;}
 
+    Item* clona() const
+    {
+        return new Armura(*this);
+    }
     Armura& operator=(const Armura &a); // operator = de copiere
     friend ostream& operator <<(ostream&, const Armura&);
     friend istream& operator >>(istream&, Armura&);
@@ -188,31 +187,10 @@ Armura &Armura::operator=(const Armura &a) {
         this->pret = a.pret;
         this->nume = a.nume;
         this->nivel = a.nivel;
-        this->putere = a.putere;
+        this->viata = a.viata;
         this->categorie = a.categorie;
-        this->id = a.id;
     }
     return *this;
-}
-
-Armura::Armura(int pret, string nume, int nivel, int putere, string categorie, int id, int viata) {
-    this -> pret = pret;
-    this -> nume = nume;
-    this -> nivel = nivel;
-    this -> putere = putere;
-    this -> categorie = categorie;
-    this -> id = id;
-    this -> viata = viata;
-}
-
-Armura::Armura(const Armura& a) {
-    this->pret = a.pret;
-    this->nume = a.nume;
-    this->nivel = a.nivel;
-    this->putere = a.putere;
-    this->categorie = a.categorie;
-    this->id = a.id;
-    this->viata = a.viata;
 }
 
 ostream& operator <<(ostream& out, const Armura& a) {
@@ -227,12 +205,8 @@ istream& operator >>(istream& in, Armura& a) {
 }
 
 void Armura::detaliiArmura(ostream &out) const {
-    out << "Id: " << id << endl;
-    out << "Nume: " << nume << endl;
-    out << "Pret: " << pret << endl;
-    out << "Nivel necesar: " << nivel << endl;
+    Item::detaliiItem(out);
     out << "+" << viata << " viata" << endl;
-    out << "Categorie necesara: " << categorie << endl;
 }
 
 // clasa principala
@@ -244,15 +218,14 @@ private:
     int viata;
     int putere;
     int stare;
-    vector<Arme> inventar; // relatie de compunere
+    vector<Item*> inventar; // relatie de compunere
     vector<Arme> armaEchipata;
-    vector<Armura> inventar_armuri;
     vector<Armura> armuraEchipata;
     string nume;
     Pet *pet; // relatie de agregare
 public:
     // constructor de initializare
-    Caracter(string categorie = "N/A", int viata = 100, int putere = 20, int nivel = 1, int bani = 100, int stare = 1, vector<Arme> inventar = {}, vector<Arme> armaEchipata = {}, string nume = "N/A", Pet *pet = nullptr);
+    Caracter(string categorie = "N/A", int viata = 100, int putere = 20, int nivel = 1, int bani = 100, int stare = 1, vector<Item*> inventar = {}, vector<Arme> armaEchipata = {}, vector<Armura> armuraEchipata = {}, string nume = "N/A", Pet *pet = nullptr);
     Caracter(const Caracter&); // constructor de copiere
     ~Caracter(){}; // destructor
 
@@ -262,24 +235,22 @@ public:
     void detaliiCaracter(ostream&);
     void setNume(istream&);
     void afiseazaInventar(); // functie membra
-    void afiseazaInventarArmuri();
     bool cumparaArma(const Arme &a); // functie membra
     bool cumparaArmura(const Armura& a);
-    void echipeazaArma(const Arme &a); // funtie membra
-    void echipeazaArmura(const Armura& a);
+    void echipeazaArma(int idx); // funtie membra
+    void echipeazaArmura(int idx);
     string getCategorie() const {return categorie;}
     int getBani() const {return bani;}
     int getInventar() const {return inventar.size();}
-    int getInventarArmuri() const {return inventar_armuri.size();}
     int getViata() const {return viata;}
     int getStare() const {return stare;}
     int getPutere() const {return putere;}
     int getNivel() const {return nivel;}
     void setStare(int stare) {this -> stare = stare;}
-    void setNivel(int nivel) {this -> nivel += nivel;}
+    void setNivel(int nivel) {this -> nivel = nivel;}
     int DMG() const {return putere - nivel;}
-    Arme alegeArma();
-    Armura alegeArmura();
+    Item* alegeArma();
+    Item* alegeArmura();
     Pet *getPet() {return pet;}
 
 
@@ -300,7 +271,7 @@ public:
     friend istream& operator >>(istream&, Caracter&); // operator pentru citire
 };
 
-Caracter::Caracter(string categorie, int viata, int putere, int nivel, int bani, int stare, vector<Arme> inventar, vector<Arme> armaEchipata, string nume, Pet *pet) {
+Caracter::Caracter(string categorie, int viata, int putere, int nivel, int bani, int stare, vector<Item*> inventar, vector<Arme> armaEchipata, vector<Armura> armuraEchipata, string nume, Pet *pet) {
     this -> categorie = categorie;
     this -> viata = viata;
     this -> putere = putere;
@@ -309,6 +280,7 @@ Caracter::Caracter(string categorie, int viata, int putere, int nivel, int bani,
     this -> stare = stare;
     this -> inventar = inventar;
     this -> armaEchipata = armaEchipata;
+    this -> armuraEchipata = armuraEchipata;
     this -> nume = nume;
     this -> pet = pet;
     cout << "Caracterul a fost creat!" <<endl;
@@ -362,18 +334,6 @@ void Caracter::afiseazaInventar() {
     }
 }
 
-void Caracter::afiseazaInventarArmuri() {
-    cout << "Inventar: \n";
-    if (inventar_armuri.size() == 0) {
-        cout << "Inventarul este gol!\n";
-    }
-    else {
-        for (int i = 0; i < inventar_armuri.size(); i++) {
-            cout << inventar_armuri[i];
-        }
-    }
-}
-
 void Caracter::detaliiCaracter(ostream& out) {
     out << "Nume: " << nume << endl;
     out << "Categorie: " << categorie << endl;
@@ -398,12 +358,12 @@ bool Caracter::cumparaArma(const Arme &a) {
         cout << "Nu ai nivelul necesar! \n";
         return false;
     }
-    if (this -> categorie != a.getCategorieArma()) {
+    if (this -> categorie != a.getCategorie()) {
         cout << "Aceasta arma nu este de categoria ta! \n";
         return false;
     }
     this -> bani -= a.getPret();
-    inventar.push_back(a);
+    inventar.push_back(a.clona());
     cout << "Ai cumaparat " << a.getNume() << " !\n";
     return true;
 }
@@ -417,72 +377,124 @@ bool Caracter::cumparaArmura(const Armura& a) {
         cout << "Nu ai nivelul necesar! \n";
         return false;
     }
-    if (this -> categorie != a.getCategorieArmura()) {
+    if (this -> categorie != a.getCategorie()) {
         cout << "Aceasta arma nu este de categoria ta! \n";
         return false;
     }
     this -> bani -= a.getPret();
-    inventar_armuri.push_back(a);
+    inventar.push_back(a.clona());
     cout << "Ai cumaparat " << a.getNume() << " !\n";
     return true;
 }
 
-void Caracter::echipeazaArma(const Arme &a) {
+void Caracter::echipeazaArma(int idx) {
     if (inventar.size() == 0) {
         cout << "Nu ai ce sa echipezi!\n";
     }
     else {
-        armaEchipata.push_back(a);
-        this -> putere += a.getPutere();
-        cout << "Ai echipat " << a.getNume() << " si ti-a crescut puterea cu " << a.getPutere() << " !\n";
-        for (vector<Arme>::iterator i = inventar.begin(); i != inventar.end(); i++) {
-            if (i->getNume() == a.getNume()) {
-                inventar.erase(i);
-                break;
+        int ok = 0,id;
+        for (int i = 0; inventar.size(); i++) {
+            if (inventar[i]->getId() == idx)
+            {
+                id = i;
+                if (typeid(*inventar[i]) == typeid(Arme))
+                    ok = 1;
+            }
+        }
+        if (ok == 0) {
+            cout << "Nu exista arma cu acest id!\n";
+        }
+        else
+        {
+            Item *ptItem = inventar[id];
+            Arme *a = dynamic_cast<Arme*>(ptItem);
+            if (a != nullptr)
+            {
+                armaEchipata.push_back(*a);
+                this -> putere += a->getPutere();
+                cout << "Ai echipat " << a->getNume() << " si ti-a crescut puterea cu " << a->getPutere() << " !\n";
+                for (int i = 0; i < inventar.size(); i++) {
+                    if (inventar[i]->getId() == a->getId()) {
+                        inventar.erase(inventar.begin() + i);
+                        break;
+                    }
+                }
             }
         }
     }
 }
 
-void Caracter::echipeazaArmura(const Armura& a) {
-    if (inventar_armuri.size() == 0) {
+void Caracter::echipeazaArmura(int idx) {
+    if (inventar.size() == 0) {
         cout << "Nu ai ce sa echipezi!\n";
     }
     else {
-        armuraEchipata.push_back(a);
-        this -> viata += a.getViata();
-        cout << "Ai echipat " << a.getNume() << "si ti-a crescut viata cu " << a.getViata() << " !\n";
-        for (vector<Armura>::iterator i = inventar_armuri.begin(); i != inventar_armuri.end(); i++) {
-            if (i -> getNume() == a.getNume()) {
-                inventar_armuri.erase(i);
-                break;
+        int ok = 0,id;
+        for (int i = 0; inventar.size(); i++) {
+            if (inventar[i]->getId() == idx)
+            {
+                id = i;
+                if (typeid(*inventar[i]) == typeid(Armura))
+                    ok = 1;
+            }
+        }
+        if (ok == 0) {
+            cout << "Nu exista armura cu acest id!\n";
+        }
+        else
+        {
+            Item *ptItem = inventar[id];
+            Armura *a = dynamic_cast<Armura*>(ptItem);
+            if (a != nullptr)
+            {
+                armuraEchipata.push_back(*a);
+                this -> viata += a->getViata();
+                cout << "Ai echipat " << a->getNume() << " si ti-a crescut viata cu " << a->getViata() << " !\n";
+                for (int i = 0; i < inventar.size(); i++) {
+                    if (inventar[i]->getId() == a->getId()) {
+                        inventar.erase(inventar.begin() + i);
+                        break;
+                    }
+                }
             }
         }
     }
 }
 
-Arme Caracter::alegeArma() {
-    cout << "Ce arma echipezi?\n";
-    int id;
-    for (int i = 0 ; i < inventar.size(); i++) {
-        cout << i+1 << ". " << inventar[i] << endl;
+Item* Caracter::alegeArma() {
+    while (true)
+    {
+        cout << "Ce arma echipezi?\n";
+        int id;
+        for (int i = 0 ; i < inventar.size(); i++) {
+            cout << i+1 << ". " << inventar[i] << endl;
+        }
+        cout << "Ce arma echipezi?\n";
+        cout << "Alege: ";
+        cin >> id;
+        if (typeid(inventar[id-1]) == typeid(Arme))
+            return inventar[id-1];
+        else
+            cout << "Ceea ce ai ales nu este arma!\n";
     }
-    cout << "Ce arma echipezi?\n";
-    cout << "Alege: ";
-    cin >> id;
-    return inventar[id-1];
 }
 
-Armura Caracter::alegeArmura() {
-    cout << "Ce arumra echipezi?\n";
-    int id;
-    for (int i = 0; i < inventar_armuri.size(); i++) {
-        cout << i+1 << ". " << inventar_armuri[i] << endl;
+Item* Caracter::alegeArmura() {
+    while (true)
+    {
+        cout << "Ce arumra echipezi?\n";
+        int id;
+        for (int i = 0; i < inventar.size(); i++) {
+            cout << i+1 << ". " << inventar[i] << endl;
+        }
+        cout << "Ce arumra echipezi?\n";
+        cout << "Alege: ";
+        cin >> id;
+        if (typeid(inventar[id-1]) == typeid(Armura))
+            return inventar[id-1];
+        else
+            cout << "Ceea ce ai ales nu este armura!\n";
     }
-    cout << "Ce arumra echipezi?\n";
-    cout << "Alege: ";
-    cin >> id;
-    return inventar_armuri[id-1];
 }
 
 // clasa magazin (mai am de adaugat si armuri da e la fel ca la arme doar ca creste viata ci nu puterea)
@@ -503,10 +515,10 @@ Magazin::Magazin(vector<Arme> inventar) {
 }
 
 void Magazin::adauga() {
-    inventar.push_back(Arme(30,"Sabie",1,15,"Razboinic",1));
-    inventar.push_back(Arme(40,"Sulita",1,20,"Razboinic",2));
-    inventar.push_back(Arme(30,"Cutit",1,25,"Ninja",3));
-    inventar.push_back(Arme(40,"Arc",1,30,"Ninja",4));
+    inventar.push_back(Arme(30,"Sabie",1,"Razboinic",30));
+    inventar.push_back(Arme(40,"Sulita",1,"Razboinic",50));
+    inventar.push_back(Arme(30,"Cutit",1,"Ninja",40));
+    inventar.push_back(Arme(40,"Arc",1,"Ninja",60));
 }
 
 void Magazin::sterge() {
@@ -526,7 +538,7 @@ Arme Magazin::getArma(int idx) {
         return inventar[idx];
     }
     cout << "Eroare!!!!\n";
-    return Arme(0,"N/A",0,0,"N/A");
+    return Arme(0,"N/A",0,"N/A",0);
 }
 
 class MagazinArmuri{
@@ -552,13 +564,13 @@ Armura MagazinArmuri::getArmura(int idx)
         return inventar[idx];
     }
     cout << "Eroare!!!!\n";
-    return Armura(0,"N/A",0,0,"N/A",999999,0);
+    return Armura(0,"N/A",0,"N/A",0);
 }
 
 void MagazinArmuri::adauga()
 {
-    inventar.push_back(Armura(30,"Platosa",1,0,"Razboinic",1,30));
-    inventar.push_back(Armura(30,"Costum ninja",1,0,"Ninja",2,50));
+    inventar.push_back(Armura(30,"Platosa",1,"Razboinic",70));
+    inventar.push_back(Armura(30,"Costum ninja",1,"Ninja",40));
 }
 
 void MagazinArmuri::sterge()
@@ -626,8 +638,8 @@ public:
 };
 
 void MonstruFoc::setLoot(Caracter& c) {
-    if (c.getCategorie() == "Razboinic")    loot.push_back(Arme(30,"Sabie",1,15,"Razboinic",1));
-    else if (c.getCategorie() == "Ninja")   loot.push_back(Arme(30,"Cutit",1,25,"Ninja",3));
+    if (c.getCategorie() == "Razboinic")    loot.push_back(Arme(30,"Sabie",1,"Razboinic",30));
+    else if (c.getCategorie() == "Ninja")   loot.push_back(Arme(30,"Cutit",1,"Ninja",40));
 }
 
 class MonstruGheata : public Monstru
@@ -647,8 +659,8 @@ public:
 };
 
 void MonstruGheata::setLoot(Caracter& c) {
-    if (c.getCategorie() == "Razboinic")    loot.push_back(Armura(30,"Platosa",1,0,"Razboinic",1,30));
-    else if (c.getCategorie() == "Ninja")   loot.push_back(Armura(30,"Costum Ninja",1,0,"Ninja",3,40));
+    if (c.getCategorie() == "Razboinic")    loot.push_back(Armura(30,"Platosa",1,"Razboinic",70));
+    else if (c.getCategorie() == "Ninja")   loot.push_back(Armura(30,"Costum Ninja",1,"Ninja",40));
 }
 
 void uiMeniuStart() {
@@ -709,21 +721,7 @@ void meniu () {
                     cout << "Alegere: ";
                     cin >> alg;
                     if (alg == 1) {
-                        cout << "Arme [Tasta 1] | Armuri [Tasta 2]\n";
-                        cout << "Alege: ";
-                        cin >> alg1;
-                        if (alg1 == 1)
-                        {
-                            erou.afiseazaInventar();
-                        }
-                        else if (alg1 == 2)
-                        {
-                            erou.afiseazaInventarArmuri();
-                        }
-                        else
-                        {
-                            cout << "Alegere invalida!\n";
-                        }
+                        erou.afiseazaInventar();
                     }
                     else if (alg == 2) {
                         erou.detaliiCaracter(cout);
@@ -840,29 +838,27 @@ void meniu () {
                 }
             case 3: {
                     int echip;
+                    cout << "Acesta este inventarul!\n";
+                    erou.afiseazaInventar();
                     cout << "Ce vrei sa echipezi?\n";
                     cout << "Arma [Tasta 1] | Armura [Tasta 2] \n";
                     cout << "Optiune: ";
                     cin >> echip;
                     if (echip == 1) {
                         // echipare arma ( se sterge din inventar si se echiepeaza, trb sa mai fac o functie sa si dezechipez sau sa inlocuiesc daca vr)
-                        Arme arma = erou.alegeArma();
-                        if (erou.getInventar() == 0) {
-                            cout << "Nu ai arme!\n";
-                        }
-                        else {
-                            erou.echipeazaArma(arma);
-                        }
+                        cout << "Scrie id-ul armei!\n";
+                        int id;
+                        cout << "ID: ";
+                        cin >> id;
+                        erou.echipeazaArma(id);
                     }
                     else if (echip == 2)
                     {
-                        Armura armura = erou.alegeArmura();
-                        if (erou.getInventarArmuri() == 0) {
-                            cout << "Nu ai armuri!\n";
-                        }
-                        else {
-                            erou.echipeazaArmura(armura);
-                        }
+                        cout << "Scrie id-ul armurii!\n";
+                        int id;
+                        cout << "ID: ";
+                        cin >> id;
+                        erou.echipeazaArmura(id);
                     }
                     else {
                         cout << "Optiune invalida!\n";
