@@ -324,12 +324,14 @@ istream& operator >>(istream& in, Caracter& c){
 
 void Caracter::afiseazaInventar() {
     cout << "Inventar: \n";
+    cout << "------------------------------\n";
     if (inventar.size() == 0) {
         cout << "Inventarul este gol!\n";
     }
     else {
         for (int i = 0; i < inventar.size(); i++) {
-            cout << inventar[i];
+            inventar[i]->detaliiItem(cout);
+            cout << "------------------------------\n";
         }
     }
 }
@@ -359,7 +361,7 @@ bool Caracter::cumparaArma(const Arme &a) {
         return false;
     }
     if (this -> categorie != a.getCategorie()) {
-        cout << "Aceasta arma nu este de categoria ta! \n";
+        cout << a.getNume() << " nu este de categoria ta! \n";
         return false;
     }
     this -> bani -= a.getPret();
@@ -378,7 +380,7 @@ bool Caracter::cumparaArmura(const Armura& a) {
         return false;
     }
     if (this -> categorie != a.getCategorie()) {
-        cout << "Aceasta arma nu este de categoria ta! \n";
+        cout << a.getNume() << " nu este de categoria ta! \n";
         return false;
     }
     this -> bani -= a.getPret();
@@ -393,7 +395,7 @@ void Caracter::echipeazaArma(int idx) {
     }
     else {
         int ok = 0,id;
-        for (int i = 0; inventar.size(); i++) {
+        for (int i = 0; i < inventar.size(); i++) {
             if (inventar[i]->getId() == idx)
             {
                 id = i;
@@ -430,7 +432,7 @@ void Caracter::echipeazaArmura(int idx) {
     }
     else {
         int ok = 0,id;
-        for (int i = 0; inventar.size(); i++) {
+        for (int i = 0; i < inventar.size(); i++) {
             if (inventar[i]->getId() == idx)
             {
                 id = i;
@@ -500,30 +502,27 @@ Item* Caracter::alegeArmura() {
 // clasa magazin (mai am de adaugat si armuri da e la fel ca la arme doar ca creste viata ci nu puterea)
 class Magazin { // Reminder: sa fac o functie de unde pot cumpara licori de viata pentru a creste viata cand ies din arena
 private:
+    static Magazin *instance;
     vector<Arme> inventar;
+    Magazin() {
+        inventar = {Arme(30,"Sabie",1,"Razboinic",30),Arme(40,"Sulita",1,"Razboinic",50),Arme(30,"Cutit",1,"Ninja",40),Arme(40,"Arc",1,"Ninja",60)};
+    }
 public:
-    Magazin(vector<Arme> inventar = {});
+    static Magazin *getInstance() {
+        if (!instance)
+            instance = new Magazin;
+        return instance;
+    }
+
+    Magazin(const Magazin&) = delete;
+    void operator=(const Magazin&) = delete;
+
     Arme getArma(int idx);
-    void adauga();
-    void sterge();
     void afiseazaInventar();
     int getInvetarSize() const {return inventar.size();}
 };
 
-Magazin::Magazin(vector<Arme> inventar) {
-    this -> inventar = inventar;
-}
-
-void Magazin::adauga() {
-    inventar.push_back(Arme(30,"Sabie",1,"Razboinic",30));
-    inventar.push_back(Arme(40,"Sulita",1,"Razboinic",50));
-    inventar.push_back(Arme(30,"Cutit",1,"Ninja",40));
-    inventar.push_back(Arme(40,"Arc",1,"Ninja",60));
-}
-
-void Magazin::sterge() {
-    inventar.clear();
-}
+Magazin *Magazin::instance = 0;
 
 void Magazin::afiseazaInventar() {
     cout << "+++++ Asta este marfa +++++\n";
@@ -543,20 +542,26 @@ Arme Magazin::getArma(int idx) {
 
 class MagazinArmuri{
 private:
+    static MagazinArmuri *instance;
     vector<Armura> inventar;
+    MagazinArmuri() {
+        inventar = {Armura(30,"Platosa",1,"Razboinic",70),Armura(30,"Costum",1,"Ninja",40)};
+    }
 public:
-    MagazinArmuri(vector<Armura> inventar = {});
+    static MagazinArmuri *getInstance() {
+        if (!instance)
+            instance = new MagazinArmuri;
+        return instance;
+    }
+
+    MagazinArmuri(const MagazinArmuri&) = delete;
+    void operator=(const MagazinArmuri&) = delete;
     Armura getArmura(int idx);
-    void adauga();
-    void sterge();
     void afiseazaInventar();
     int getInvetarSize() const {return inventar.size();}
 };
 
-MagazinArmuri::MagazinArmuri(vector<Armura> inventar)
-{
-    this -> inventar = inventar;
-}
+MagazinArmuri *MagazinArmuri::instance = 0;
 
 Armura MagazinArmuri::getArmura(int idx)
 {
@@ -565,17 +570,6 @@ Armura MagazinArmuri::getArmura(int idx)
     }
     cout << "Eroare!!!!\n";
     return Armura(0,"N/A",0,"N/A",0);
-}
-
-void MagazinArmuri::adauga()
-{
-    inventar.push_back(Armura(30,"Platosa",1,"Razboinic",70));
-    inventar.push_back(Armura(30,"Costum ninja",1,"Ninja",40));
-}
-
-void MagazinArmuri::sterge()
-{
-    inventar.clear();
 }
 
 void MagazinArmuri::afiseazaInventar() {
@@ -687,8 +681,8 @@ void meniu () {
     int ac;
     ac = alegeCaracter();
     Caracter erou;
-    Magazin magazinArme;
-    MagazinArmuri magazinArmuri;
+    Magazin *magazinArme = Magazin::getInstance();
+    MagazinArmuri *magazinArmuri = MagazinArmuri::getInstance();
     Pet p;
     Monstru monstru("Goblin");
     MonstruFoc monstruF("Dragon");
@@ -741,98 +735,95 @@ void meniu () {
                         int nr, bani;
                         int cos = 0;
                         vector <Arme>optiuni = {};
-                        magazinArme.adauga();
-                        magazinArme.afiseazaInventar();
+                        magazinArme->afiseazaInventar();
                         cout << "Banii tai: ";
                         bani = erou.getBani();
                         cout << bani << endl;
-                        cout << "Cate arme vrei sa cumperi?\n";
+                        cout << "Cate arme vrei sa cumperi? [0 daca nu vrei nimic]\n";
                         cout << "Nr: ";
                         cin >> nr;
-                        for (int i = 0; i < nr; i++) {
-                            Arme armaTemp;
-                            cin >> armaTemp; // citirea a n obiecte
-                            for (int j = 0; j < magazinArme.getInvetarSize(); j++) {
-                                Arme a = magazinArme.getArma(j);
-                                if (a.getNume() == armaTemp.getNume()) {
-                                    optiuni.push_back(a);
-                                    cos += a.getPret(); // salvarea in cos pentru un pret total
-                                }
-                            }
+                        if (nr == 0) {
+                            cout << "La revedere!\n";
                         }
-                        bool cumpara;
-                        cout << "Totalul este " << cos << " bani!\n";
-                        try
-                        {
-                            if (erou.getBani() >= cos) {
-                                for (int i = 0; i < optiuni.size(); i++) {
-                                    cumpara = erou.cumparaArma(optiuni[i]);
-                                }
-                                if (cumpara) {
-                                    if (optiuni.size() == 1) {
-                                        cout << "Arma a fost adaugata in inventar!\n";
-                                    }
-                                    else {
-                                        cout << "Armele au fost adaugate in inventar!\n";
+                        else {
+                            for (int i = 0; i < nr; i++) {
+                                Arme armaTemp;
+                                cin >> armaTemp; // citirea a n obiecte
+                                for (int j = 0; j < magazinArme->getInvetarSize(); j++) {
+                                    Arme a = magazinArme->getArma(j);
+                                    if (a.getNume() == armaTemp.getNume()) {
+                                        optiuni.push_back(a);
+                                        if (a.getCategorie() == armaTemp.getCategorie())
+                                            cos += a.getPret(); // salvarea in cos pentru un pret total
                                     }
                                 }
                             }
-                            else throw BugetInsuficientException();
+                            bool cumpara;
+                            cout << "Totalul este " << cos << " bani!\n";
+                            try
+                            {
+                                if (erou.getBani() >= cos) {
+                                    for (int i = 0; i < optiuni.size(); i++) {
+                                        cumpara = erou.cumparaArma(optiuni[i]);
+                                        if (cumpara)
+                                            cout << optiuni[i].getNume() << " a fost adaugata in inventar!\n";
+                                    }
+                                }
+                                else throw BugetInsuficientException();
+                            }
+                            catch (exception& e)
+                            {
+                                cout << e.what();
+                            }
                         }
-                        catch (exception& e)
-                        {
-                            cout << e.what();
-                        }
-                        magazinArme.sterge();
                     }
                     else if (alegere == 2)
                     {
                         int nr, bani;
                         int cos = 0;
                         vector <Armura>optiuni = {};
-                        magazinArmuri.adauga();
-                        magazinArmuri.afiseazaInventar();
+                        magazinArmuri->afiseazaInventar();
                         cout << "Banii tai: ";
                         bani = erou.getBani();
                         cout << bani << endl;
-                        cout << "Cate armuri vrei sa cumperi?\n";
+                        cout << "Cate armuri vrei sa cumperi? [0 daca nu vrei nimic]\n";
                         cout << "Nr: ";
                         cin >> nr;
-                        for (int i = 0; i < nr; i++) {
-                            Armura armuraTemp;
-                            cin >> armuraTemp; // citirea a n obiecte
-                            for (int j = 0; j < magazinArmuri.getInvetarSize(); j++) {
-                                Armura a = magazinArmuri.getArmura(j);
-                                if (a.getNume() == armuraTemp.getNume()) {
-                                    optiuni.push_back(a);
-                                    cos += a.getPret(); // salvarea in cos pentru un pret total
-                                }
-                            }
+                        if (nr == 0) {
+                            cout << "La revedere!\n";
                         }
-                        bool cumpara;
-                        cout << "Totalul este " << cos << " bani!\n";
-                        try
+                        else
                         {
-                            if (erou.getBani() >= cos) {
-                                for (int i = 0; i < optiuni.size(); i++) {
-                                    cumpara = erou.cumparaArmura(optiuni[i]);
-                                }
-                                if (cumpara) {
-                                    if (optiuni.size() == 1) {
-                                        cout << "Armura a fost adaugata in inventar!\n";
-                                    }
-                                    else {
-                                        cout << "Armurile au fost adaugate in inventar!\n";
+                            for (int i = 0; i < nr; i++) {
+                                Armura armuraTemp;
+                                cin >> armuraTemp; // citirea a n obiecte
+                                for (int j = 0; j < magazinArmuri->getInvetarSize(); j++) {
+                                    Armura a = magazinArmuri->getArmura(j);
+                                    if (a.getNume() == armuraTemp.getNume()) {
+                                        optiuni.push_back(a);
+                                        if (a.getCategorie() == armuraTemp.getCategorie())
+                                            cos += a.getPret(); // salvarea in cos pentru un pret total
                                     }
                                 }
                             }
-                            else throw BugetInsuficientException();
+                            bool cumpara;
+                            cout << "Totalul este " << cos << " bani!\n";
+                            try
+                            {
+                                if (erou.getBani() >= cos) {
+                                    for (int i = 0; i < optiuni.size(); i++) {
+                                        cumpara = erou.cumparaArmura(optiuni[i]);
+                                        if (cumpara)
+                                            cout << "Armura a fost adaugata in inventar!\n";
+                                    }
+                                }
+                                else throw BugetInsuficientException();
+                            }
+                            catch (exception& e)
+                            {
+                                cout << e.what();
+                            }
                         }
-                        catch (exception& e)
-                        {
-                            cout << e.what();
-                        }
-                        magazinArmuri.sterge();
                     }
                     break;
                 }
