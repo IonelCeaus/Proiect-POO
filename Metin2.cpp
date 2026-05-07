@@ -208,7 +208,6 @@ void Armura::detaliiArmura(ostream &out) const {
     Item::detaliiItem(out);
     out << "+" << viata << " viata" << endl;
 }
-
 // clasa principala
 class Caracter {
 private:
@@ -248,6 +247,9 @@ public:
     int getNivel() const {return nivel;}
     void setStare(int stare) {this -> stare = stare;}
     void setNivel(int nivel) {this -> nivel = nivel;}
+    void scadeBani(int pret) {bani -= pret;}
+    void cresteViata(int hp) {viata += hp;}
+    void crestePuterea(int pow) {putere += pow;}
     int DMG() const {return putere - nivel;}
     Item* alegeArma();
     Item* alegeArmura();
@@ -499,7 +501,159 @@ Item* Caracter::alegeArmura() {
     }
 }
 
-// clasa magazin (mai am de adaugat si armuri da e la fel ca la arme doar ca creste viata ci nu puterea)
+class Potiune {
+protected:
+    string marime;
+public:
+    virtual ~Potiune() {}
+    virtual void citire(istream &in);
+    virtual void afisare(ostream &out);
+    friend istream& operator>>(istream&, Potiune&);
+    friend ostream& operator<<(ostream&, Potiune&);
+
+    int getPret() const {
+        if (marime == "s" || marime == "S") return 10;
+        else if (marime == "m" || marime == "M") return 30;
+        else if (marime == "l" || marime == "L") return 50;
+        return 0;
+    }
+    virtual void aplicaEfect(Caracter& c) {}
+};
+
+void Potiune::citire(istream &in){
+    cout << "Introduceti marimea [S-(+10 status | -10 bani) | M-(+30 status | -30 bani) | L-(+50 status | -50 bani) ] : " << endl;
+    in >> marime;
+}
+void Potiune::afisare(ostream &out){
+    out << "Marimea: " << marime << endl;
+}
+istream& operator>>(istream& in,Potiune& ob){
+    ob.citire(in);
+    return in;
+}
+
+ostream& operator<<(ostream& out, Potiune& ob){
+    ob.afisare(out);
+    return out;
+}
+
+class PotiuneViata : public Potiune {
+private:
+    int viata;
+    string nume;
+public:
+    PotiuneViata(string nume = "Potiune Viata") : nume(nume) {}
+    void citire(istream &in) {
+        Potiune::citire(in);
+    }
+    void setViata() {
+        if (marime == "s" || marime == "S") viata = 10;
+        if (marime == "m" || marime == "M") viata = 30;
+        if (marime == "l" || marime == "L") viata = 30;
+    }
+    void afisare(ostream& out) {
+        cout << nume << endl;
+        Potiune::afisare(out);
+        cout << "Pret: ";
+        if (marime == "s" || marime == "S") cout << 10 << endl;
+        if (marime == "m" || marime == "M") cout << 30 << endl;
+        if (marime == "l" || marime == "L") cout << 50 << endl;
+    }
+    int getViata() const {return viata;}
+
+    void aplicaEfect(Caracter& c) {
+        setViata();
+        c.cresteViata(viata);
+        cout << "Ai baut " << nume << "! Hp: " << c.getViata() << endl;
+    }
+};
+
+class PotiunePutere : public Potiune {
+private:
+    int putere;
+    string nume;
+public:
+    PotiunePutere(string nume = "Potiune Putere") : nume(nume) {}
+    void citire(istream &in) {
+        Potiune::citire(in);
+    }
+    void setPutere() {
+        if (marime == "s" || marime == "S") putere = 10;
+        if (marime == "m" || marime == "M") putere = 30;
+        if (marime == "l" || marime == "L") putere = 30;
+    }
+    void afisare(ostream& out) {
+        cout << nume << endl;
+        Potiune::afisare(out);
+        cout << "Pret: ";
+        if (marime == "s" || marime == "S") cout << 10 << endl;
+        if (marime == "m" || marime == "M") cout << 30 << endl;
+        if (marime == "l" || marime == "L") cout << 50 << endl;
+    }
+    int getPutere() const {return putere;}
+
+    void aplicaEfect(Caracter& c) {
+        setPutere();
+        c.cresteViata(putere);
+        cout << "Ai baut " << nume << "! Putere: " << c.getPutere() << endl;
+    }
+};
+
+
+template<typename T>
+class InventarPotiuni {
+private:
+    vector<T> inventar;
+public:
+    InventarPotiuni();
+    void cumpara(Caracter& c, int nr) {
+        T potiune;
+        int cost = 0;
+        vector<T> optiuni;
+        for (int i = 0; i < nr; i++)
+        {
+            cin >> potiune;
+            cost += potiune.getPret();
+            optiuni.push_back(potiune);
+        }
+        if (c.getBani() >= cost) {
+            c.scadeBani(cost);
+            for (int i = 0; i < optiuni.size(); i++)
+                inventar.push_back(optiuni[i]);
+            cout <<"Potiunile cumparate cu succes!\n";
+        }
+        else {
+            cout <<"Nu ai bani!\n";
+        }
+    }
+    void folosestePotiune(Caracter& c) {
+        if (inventar.size() == 0) {
+            cout << "Nu ai potiuni!\n";
+        }
+        else
+        {
+            cout << "--- Inventar Potiuni ---\n";
+            for (int i = 0; i < inventar.size(); i++) {
+                cout << i+1 <<" "<< inventar[i] << endl;
+            }
+            int a;
+            cout << "Alege ce potiune folosesti: (1-" << inventar.size() << ") \n";
+            cout << "Potiunea: ";
+            cin >> a;
+            if (a > 0 && a <= inventar.size()) {
+                inventar[a-1].aplicaEfect(c);
+                inventar.erase(inventar.begin() + (a-1));
+            }
+            else {
+                cout << "Optiune invalida!\n";
+            }
+        }
+    }
+};
+
+template <typename T>
+InventarPotiuni<T>::InventarPotiuni() {}
+
 class Magazin { // Reminder: sa fac o functie de unde pot cumpara licori de viata pentru a creste viata cand ies din arena
 private:
     static Magazin *instance;
@@ -665,11 +819,12 @@ void uiMeniuStart() {
 
 void uiMeniu() {
     cout<<"+++++++++++++++++++++++++++++++"<<endl;
-    cout<<" Introdu 1 pentru a vedea detaliile caracterului "<<endl;
+    cout<<" Introdu 1 pentru a vedea detaliile caracterului sau inventarul "<<endl;
     cout<<" Introdu 2 pentru a merge la magazin "<<endl;
-    cout<<" Introdu 3 pentru a echipa arma/armura cumparata "<<endl;
+    cout<<" Introdu 3 pentru a echipa arma/armura cumparata"<<endl;
     cout<<" Introdu 4 pentru a iti alege un pet"<<endl;
-    cout<<" Introdu 5 pentru a intra in arena "<<endl;
+    cout<<" Introdu 5 pentru a bea potiuni" << endl;
+    cout<<" Introdu 6 pentru a intra in arena "<<endl;
     cout<<" Pentru a iesi din program apasa 0"<<endl;
     cout<<"-----------------------------\n";
 }
@@ -683,6 +838,8 @@ void meniu () {
     Caracter erou;
     Magazin *magazinArme = Magazin::getInstance();
     MagazinArmuri *magazinArmuri = MagazinArmuri::getInstance();
+    InventarPotiuni<PotiuneViata> invViata;
+    InventarPotiuni<PotiunePutere> invPutere;
     Pet p;
     Monstru monstru("Goblin");
     MonstruFoc monstruF("Dragon");
@@ -727,7 +884,7 @@ void meniu () {
             case 2: {
                     // aici cumparam de la magazin si verifica daca am bani de arma sau arma este categoria mea
                     int alegere;
-                    cout << "Magazin arme [Tasta 1] | Magazin armuri [Tasta 2]\n";
+                    cout << "Magazin arme [Tasta 1] | Magazin armuri [Tasta 2] | Potiuni [Tasta 3]\n";
                     cout << "Alegere: ";
                     cin >> alegere;
                     if (alegere == 1)
@@ -825,6 +982,27 @@ void meniu () {
                             }
                         }
                     }
+                    else if (alegere == 3) {
+                        cout << "Potiuni de viata [Tasta 1] | Potiuni de putere [Tasta 2]\n";
+                        cout << "Alegere: ";
+                        int alg;
+                        cin >> alg;
+                        if (alg == 1) {
+                            cout << "Cate potiuni dorersti?\n";
+                            int nr;
+                            cin >> nr;
+                            invViata.cumpara(erou,nr);
+                        }
+                        else if (alg == 2) {
+                            cout << "Cate potiuni dorersti?\n";
+                            int nr;
+                            cin >> nr;
+                            invPutere.cumpara(erou,nr);
+                        }
+                        else {
+                            cout << "Invalid!\n";
+                        }
+                    }
                     break;
                 }
             case 3: {
@@ -885,6 +1063,18 @@ void meniu () {
             }
             case 5:
                 {
+                    cout << "Ce potiune vrei sa bei?\n";
+                    cout << "Viata [Tasta 1] | Putere [Tasta 2]\n";
+                    int optiune;
+                    cout << "Optiune: ";
+                    cin >> optiune;
+                    if (optiune == 1) invViata.folosestePotiune(erou);
+                    else if (optiune == 2) invPutere.folosestePotiune(erou);
+                    else cout << "Optiune invalida!\n";
+                    break;
+                }
+            case 6:
+                {
                     cout << "Bun venit in Dungeon!" << endl;
                     bool cont = true;
                     Dungeon.push(&monstruG);
@@ -913,7 +1103,7 @@ void meniu () {
                                 if (niv >= m->getNivel()) {
                                     while (true) {
                                         int nrRandom = distr(gen);
-                                        cout << "Ataci [Tasta 1] sau fugi [Tasta 2] ?\n";
+                                        cout << "Ataci [Tasta 1] sau Fugi [Tasta 2]?\n";
                                         int a;
                                         cout << "Alegerea ta: ";
                                         cin >> a;
