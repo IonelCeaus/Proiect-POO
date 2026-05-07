@@ -594,7 +594,7 @@ public:
 
     void aplicaEfect(Caracter& c) {
         setPutere();
-        c.cresteViata(putere);
+        c.crestePuterea(putere);
         cout << "Ai baut " << nume << "! Putere: " << c.getPutere() << endl;
     }
 };
@@ -1115,8 +1115,7 @@ void meniu () {
                                             asdf = 2;
                                             break;
                                         }
-                                        cout << nrRandom << endl;
-                                        if (nrRandom > 17) m -> abilitateSpeciala();
+                                        if (nrRandom > 7) m -> abilitateSpeciala();
                                         if (erou.getViata() > 0 && m -> getViata() > 0) erou -= m -> DMG();
                                         else break;
                                     }
