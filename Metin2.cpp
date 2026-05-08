@@ -11,7 +11,8 @@ int alegeCaracter(); // functie declarata pt ca imi dadea eroare
 // asta o sa fac la caracter daca moare in pun ca e mor si se sterge tot
 enum stareCaracter {
     Mort = 0,
-    Viu = 1
+    Viu = 1,
+    Batut = 3
 };
 
 class BugetInsuficientException : public exception {
@@ -74,7 +75,7 @@ public:
     int getId() const {return id;}
 
     friend ostream& operator <<(ostream&, const Item&);
-    void detaliiItem(ostream&) const;
+    virtual void detalii(ostream&) const;
 
 };
 
@@ -83,11 +84,11 @@ int Item::contorId = 0;
 Item::~Item() {}
 
 ostream& operator <<(ostream& out, const Item& a) {
-    a.detaliiItem(out);
+    a.detalii(out);
     return out;
 }
 
-void Item::detaliiItem(ostream &out) const {
+void Item::detalii(ostream &out) const {
     out << "Id: " << id << endl;
     out << "Nume: " << nume << endl;
     out << "Pret: " << pret << endl;
@@ -113,7 +114,7 @@ public:
     Arme& operator=(const Arme &a); // operator = de copiere
     friend ostream& operator <<(ostream&, const Arme&);
     friend istream& operator >>(istream&, Arme&);
-    void detaliiArma(ostream&) const;
+    void detalii(ostream&) const;
 
     // operator incarcat ca functie non membra
     friend Arme operator<(const Arme &a1, const Arme &a2) {
@@ -137,7 +138,7 @@ Arme &Arme::operator=(const Arme &a) {
 }
 
 ostream& operator <<(ostream& out, const Arme& a) {
-    a.detaliiArma(out);
+    a.detalii(out);
     return out;
 }
 
@@ -147,8 +148,8 @@ istream& operator >>(istream& in, Arme& a) {
     return in;
 }
 
-void Arme::detaliiArma(ostream &out) const {
-    Item::detaliiItem(out);
+void Arme::detalii(ostream &out) const {
+    Item::detalii(out);
     out << "+" << putere << " putere" << endl;
 }
 
@@ -170,7 +171,7 @@ public:
     Armura& operator=(const Armura &a); // operator = de copiere
     friend ostream& operator <<(ostream&, const Armura&);
     friend istream& operator >>(istream&, Armura&);
-    void detaliiArmura(ostream&) const;
+    void detalii(ostream&) const;
 
     // operator incarcat ca functie non membra
     friend Armura operator<(const Armura &a1, const Armura &a2) {
@@ -194,7 +195,7 @@ Armura &Armura::operator=(const Armura &a) {
 }
 
 ostream& operator <<(ostream& out, const Armura& a) {
-    a.detaliiArmura(out);
+    a.detalii(out);
     return out;
 }
 
@@ -204,8 +205,8 @@ istream& operator >>(istream& in, Armura& a) {
     return in;
 }
 
-void Armura::detaliiArmura(ostream &out) const {
-    Item::detaliiItem(out);
+void Armura::detalii(ostream &out) const {
+    Item::detalii(out);
     out << "+" << viata << " viata" << endl;
 }
 // clasa principala
@@ -237,7 +238,9 @@ public:
     bool cumparaArma(const Arme &a); // functie membra
     bool cumparaArmura(const Armura& a);
     void echipeazaArma(int idx); // funtie membra
+    void scoateArma();
     void echipeazaArmura(int idx);
+    void scoateArmura();
     string getCategorie() const {return categorie;}
     int getBani() const {return bani;}
     int getInventar() const {return inventar.size();}
@@ -246,15 +249,23 @@ public:
     int getPutere() const {return putere;}
     int getNivel() const {return nivel;}
     void setStare(int stare) {this -> stare = stare;}
-    void setNivel(int nivel) {this -> nivel = nivel;}
+    void levelUp() {nivel++;}
     void scadeBani(int pret) {bani -= pret;}
     void cresteViata(int hp) {viata += hp;}
     void crestePuterea(int pow) {putere += pow;}
+    void scadeViata(int hp) {viata -= hp;}
+    void scadePuterea(int pow) {putere -= pow;}
     int DMG() const {return putere - nivel;}
     Item* alegeArma();
     Item* alegeArmura();
     Pet *getPet() {return pet;}
-
+    void adaugaArma(Arme& a);
+    void adaugaArmura(Armura& a);
+    void setNivel(int nivel) {this -> nivel = nivel;}
+    void setBani(int bani) {this -> bani = bani;}
+    void setViata(int viata) {this -> viata = viata;}
+    void setPutere(int putere) {this -> putere = putere;}
+    void viataMaxima() {viata = armuraEchipata[0].getViata() + 90 + 10 * nivel + pet->getViata();};
 
     // operator ca functie membra
     void operator +=(int suma) {
@@ -332,7 +343,7 @@ void Caracter::afiseazaInventar() {
     }
     else {
         for (int i = 0; i < inventar.size(); i++) {
-            inventar[i]->detaliiItem(cout);
+            inventar[i]->detalii(cout);
             cout << "------------------------------\n";
         }
     }
@@ -351,6 +362,14 @@ void Caracter::detaliiCaracter(ostream& out) {
     else {
         out << "Pet: Nu ai pet" << endl;
     }
+    out << "Arma echipata: " << endl;
+    out << "-----------" << endl;
+    armaEchipata[0].detalii(out);
+    out << "-----------" << endl;
+    out << "Armura echipata: " << endl;
+    out << "-----------" << endl;
+    armuraEchipata[0].detalii(out);
+    out << "-----------" << endl;
 }
 
 bool Caracter::cumparaArma(const Arme &a) {
@@ -391,41 +410,63 @@ bool Caracter::cumparaArmura(const Armura& a) {
     return true;
 }
 
+void Caracter::scoateArma() {
+    putere -= armaEchipata[0].getPutere();
+    Arme arma = armaEchipata.back();
+    Arme* copiearma = new Arme(arma);
+    inventar.push_back(copiearma);
+    armaEchipata.pop_back();
+}
+
 void Caracter::echipeazaArma(int idx) {
     if (inventar.size() == 0) {
         cout << "Nu ai ce sa echipezi!\n";
     }
     else {
-        int ok = 0,id;
-        for (int i = 0; i < inventar.size(); i++) {
-            if (inventar[i]->getId() == idx)
-            {
-                id = i;
-                if (typeid(*inventar[i]) == typeid(Arme))
-                    ok = 1;
+        if (armaEchipata.size() == 0) {
+            int ok = 0,id;
+            for (int i = 0; i < inventar.size(); i++) {
+                if (inventar[i]->getId() == idx)
+                {
+                    id = i;
+                    if (typeid(*inventar[i]) == typeid(Arme))
+                        ok = 1;
+                }
             }
-        }
-        if (ok == 0) {
-            cout << "Nu exista arma cu acest id!\n";
-        }
-        else
-        {
-            Item *ptItem = inventar[id];
-            Arme *a = dynamic_cast<Arme*>(ptItem);
-            if (a != nullptr)
+            if (ok == 0) {
+                cout << "Nu exista arma cu acest id!\n";
+            }
+            else
             {
-                armaEchipata.push_back(*a);
-                this -> putere += a->getPutere();
-                cout << "Ai echipat " << a->getNume() << " si ti-a crescut puterea cu " << a->getPutere() << " !\n";
-                for (int i = 0; i < inventar.size(); i++) {
-                    if (inventar[i]->getId() == a->getId()) {
-                        inventar.erase(inventar.begin() + i);
-                        break;
+                Item *ptItem = inventar[id];
+                Arme *a = dynamic_cast<Arme*>(ptItem);
+                if (a != nullptr)
+                {
+                    armaEchipata.push_back(*a);
+                    this -> putere += a->getPutere();
+                    cout << "Ai echipat " << a->getNume() << " si ti-a crescut puterea cu " << a->getPutere() << " !\n";
+                    for (int i = 0; i < inventar.size(); i++) {
+                        if (inventar[i]->getId() == a->getId()) {
+                            inventar.erase(inventar.begin() + i);
+                            break;
+                        }
                     }
                 }
             }
         }
+        else {
+            scoateArma();
+            echipeazaArma(idx);
+        }
     }
+}
+
+void Caracter::scoateArmura() {
+    viata -= armuraEchipata[0].getViata();
+    Armura armura = armuraEchipata.back();
+    Armura* copiearmura = new Armura(armura);
+    inventar.push_back(copiearmura);
+    armuraEchipata.pop_back();
 }
 
 void Caracter::echipeazaArmura(int idx) {
@@ -433,36 +474,44 @@ void Caracter::echipeazaArmura(int idx) {
         cout << "Nu ai ce sa echipezi!\n";
     }
     else {
-        int ok = 0,id;
-        for (int i = 0; i < inventar.size(); i++) {
-            if (inventar[i]->getId() == idx)
-            {
-                id = i;
-                if (typeid(*inventar[i]) == typeid(Armura))
-                    ok = 1;
-            }
-        }
-        if (ok == 0) {
-            cout << "Nu exista armura cu acest id!\n";
-        }
-        else
+        if (armuraEchipata.size() == 0)
         {
-            Item *ptItem = inventar[id];
-            Armura *a = dynamic_cast<Armura*>(ptItem);
-            if (a != nullptr)
+            int ok = 0,id;
+            for (int i = 0; i < inventar.size(); i++) {
+                if (inventar[i]->getId() == idx)
+                {
+                    id = i;
+                    if (typeid(*inventar[i]) == typeid(Armura))
+                        ok = 1;
+                }
+            }
+            if (ok == 0) {
+                cout << "Nu exista armura cu acest id!\n";
+            }
+            else
             {
-                armuraEchipata.push_back(*a);
-                this -> viata += a->getViata();
-                cout << "Ai echipat " << a->getNume() << " si ti-a crescut viata cu " << a->getViata() << " !\n";
-                for (int i = 0; i < inventar.size(); i++) {
-                    if (inventar[i]->getId() == a->getId()) {
-                        inventar.erase(inventar.begin() + i);
-                        break;
+                Item *ptItem = inventar[id];
+                Armura *a = dynamic_cast<Armura*>(ptItem);
+                if (a != nullptr)
+                {
+                    armuraEchipata.push_back(*a);
+                    this -> viata += a->getViata();
+                    cout << "Ai echipat " << a->getNume() << " si ti-a crescut viata cu " << a->getViata() << " !\n";
+                    for (int i = 0; i < inventar.size(); i++) {
+                        if (inventar[i]->getId() == a->getId()) {
+                            inventar.erase(inventar.begin() + i);
+                            break;
+                        }
                     }
                 }
             }
         }
+        else {
+            scoateArmura();
+            echipeazaArmura(idx);
+        }
     }
+
 }
 
 Item* Caracter::alegeArma() {
@@ -499,6 +548,20 @@ Item* Caracter::alegeArmura() {
         else
             cout << "Ceea ce ai ales nu este armura!\n";
     }
+}
+
+void Caracter::adaugaArma(Arme& a)
+{
+    Arme* a1 = new Arme(a);
+    inventar.push_back(a1);
+    cout << "Arma " << a.getNume() << " a fost adaugata in inventar\n";
+}
+
+void Caracter::adaugaArmura(Armura& a)
+{
+    Armura* a1 = new Armura(a);
+    inventar.push_back(a1);
+    cout <<"Armura " << a.getNume() << " a fost adaugata in inventar\n";
 }
 
 class Potiune {
@@ -753,7 +816,7 @@ public:
 
     virtual void set(string nume,int viata,int nivel);
     virtual int DMG() const {return putere + nivel;}
-    virtual void abilitateSpeciala() {}
+    virtual void abilitateSpeciala(Caracter& c) {}
     virtual void setLoot(Caracter& c) {}
     void operator -= (int hp) {
         this -> viata -= hp;
@@ -761,6 +824,8 @@ public:
         cout << "Viata monstrului: " << viata << " !\n";
     }
     virtual string getLoot() const {return "nimic";}
+    virtual Arme dropeazaArma() {}
+    virtual Armura dropeazaArmura() {}
 };
 
 void Monstru::set(string nume, int viata, int nivel) {
@@ -769,7 +834,7 @@ void Monstru::set(string nume, int viata, int nivel) {
     this -> nivel = nivel;
 }
 
-class MonstruFoc : public Monstru
+class MonstruFoc : virtual public Monstru
 {
 private:
     vector<Arme> loot;
@@ -778,11 +843,13 @@ public:
     ~MonstruFoc(){};
     void setLoot(Caracter& c);
     int DMG() const {return putere + nivel * 2;}
-    void abilitateSpeciala() {
+    void abilitateSpeciala(Caracter& c) {
         putere += 30;
-        cout << "Puterea monstrului a crescut cu 30";
+        c.scadePuterea(30);
+        cout << nume <<"ti-a furat 30 putere!\n";
     }
     string getLoot() const {return loot[0].getNume();}
+    Arme dropeazaArma() {return loot[0];}
 };
 
 void MonstruFoc::setLoot(Caracter& c) {
@@ -790,7 +857,7 @@ void MonstruFoc::setLoot(Caracter& c) {
     else if (c.getCategorie() == "Ninja")   loot.push_back(Arme(30,"Cutit",1,"Ninja",40));
 }
 
-class MonstruGheata : public Monstru
+class MonstruGheata : virtual public Monstru
 {
 private:
     vector<Armura> loot;
@@ -799,17 +866,45 @@ public:
     ~MonstruGheata(){};
     void setLoot(Caracter& c);
     int DMG() const {return putere + nivel * 4;}
-    void abilitateSpeciala() {
+    void abilitateSpeciala(Caracter& c) {
         viata += 30;
-        cout << "Viata monstrului a crescut cu 30";
+        c.scadeViata(30);
+        cout << nume <<" ti-a furat 30HP!\n";
     }
     string getLoot() const {return loot[0].getNume();}
+    Armura dropeazaArmura() {return loot[0];}
 };
 
 void MonstruGheata::setLoot(Caracter& c) {
     if (c.getCategorie() == "Razboinic")    loot.push_back(Armura(30,"Platosa",1,"Razboinic",70));
     else if (c.getCategorie() == "Ninja")   loot.push_back(Armura(30,"Costum Ninja",1,"Ninja",40));
 }
+
+class Boss : public MonstruFoc, public MonstruGheata
+{
+public:
+    Boss(string nume = "Boss", int viata = 300, int nivel = 20, int putere = 100, int bani = 200, vector<Arme> lootArme = {}, vector<Armura> lootArmuri = {})
+    : Monstru(nume,viata,nivel,putere,bani), MonstruFoc(nume,viata,nivel,putere,bani,lootArme), MonstruGheata(nume,viata,nivel,putere,bani,lootArmuri) {}
+
+    int DMG() const {return putere + nivel * 6;}
+
+    void abilitateSpeciala(Caracter& c) {
+        c.scadeViata(20);
+        c.scadePuterea(20);
+        viata += 20;
+        putere += 20;
+        cout << nume << " si-a activat abilitatea speciala si ti-a furat 20HP si 20 putere!\n";
+    }
+
+    void setLoot(Caracter& c) {
+        MonstruFoc::setLoot(c);
+        MonstruGheata::setLoot(c);
+    }
+
+    string getLoot() const {
+        return MonstruFoc::getLoot();
+    }
+};
 
 void uiMeniuStart() {
     cout<<"+++++++++++++++++++++++++++++++"<<endl;
@@ -844,6 +939,7 @@ void meniu () {
     Monstru monstru("Goblin");
     MonstruFoc monstruF("Dragon");
     MonstruGheata monstruG("Golem");
+    Boss boss("Seful Dungenului");
     stack<Monstru*> Dungeon;
     random_device rd;
     mt19937 gen(rd());
@@ -852,6 +948,10 @@ void meniu () {
     if (ac == 1) {
         cout << "Ai ales Razboinic! \n";
         erou.setCategorie("Razboinic", 100, 70);
+        erou.setNivel(50);
+        erou.setBani(100000);
+        erou.setViata(1000000);
+        erou.setPutere(100000);
     }
     else {
         cout << "Ai ales Ninja! \n";
@@ -1077,29 +1177,38 @@ void meniu () {
                 {
                     cout << "Bun venit in Dungeon!" << endl;
                     bool cont = true;
+                    Dungeon.push(&boss);
                     Dungeon.push(&monstruG);
                     Dungeon.push(&monstruF);
                     Dungeon.push(&monstru);
-                    while (cont && erou.getStare() == Viu)
+                    while (cont && (erou.getStare() == Viu || erou.getStare() == Batut))
                     {
+                        if (Dungeon.empty()) {
+                            cout << "Ai terminat jocul. Felicitari!!!\n";
+                            cout << "Inca te poti juca dar deja faci fata peste tot!\n";
+                            cont = false;
+                            continue;
+                        }
+                        if (erou.getViata() < 50)
+                            erou.setStare(Batut);
                         cout << "Continui?\n";
                         cout << "Da [Tasta 1] | Nu [Tasta 2] \n";
                         int asdf;
                         cout << "Alegerea ta: ";
                         cin >> asdf;
                         if (asdf == 1) {
-                            if (Dungeon.empty()) {
-                                cout << "Ai terminat jocul. Felicitari!!!\n";
-                                cont = false;
-                                continue;
+                            if (erou.getStare() == Batut) {
+                                cout << "Nu ai asa multa viata! Iti sugerez sa fugi din arena si sa bagi o potiune!\n";
                             }
-                            cout << "Ai intrat in camera " << 5 - Dungeon.size() << " !\n";
+                            if (5 - Dungeon.size() != 4)
+                                cout << "Ai intrat in camera " << 5 - Dungeon.size() << " !\n";
+                            else
+                                cout << "Ai ajuns la BOSS\n";
                             Monstru* m = Dungeon.top();
                             try
                             {
                                 int niv = erou.getNivel();
-                                if (typeid(*m) == typeid(MonstruFoc))
-                                    m->setLoot(erou);
+                                m->setLoot(erou);
                                 if (niv >= m->getNivel()) {
                                     while (true) {
                                         int nrRandom = distr(gen);
@@ -1115,7 +1224,7 @@ void meniu () {
                                             asdf = 2;
                                             break;
                                         }
-                                        if (nrRandom > 7) m -> abilitateSpeciala();
+                                        if (nrRandom > 7 && m -> getViata() > 0) m -> abilitateSpeciala(erou);
                                         if (erou.getViata() > 0 && m -> getViata() > 0) erou -= m -> DMG();
                                         else break;
                                     }
@@ -1123,16 +1232,28 @@ void meniu () {
                                     {
                                         cout << "Felicitari ai castigat in camera " << 5 - Dungeon.size() << " !\n";
                                         erou += m->getBani();
-                                        erou.setNivel(1);
+                                        erou.levelUp();
+                                        erou.viataMaxima();
+                                        erou.setStare(Viu);
                                         cout << "Ai trecut la nivelul " << erou.getNivel() << " !\n";
                                         if (typeid(*m) == typeid(MonstruFoc))
                                         {
-                                            cout << "Ai primit " << m -> getLoot() << " !\n";
-                                            // cand o sa fac inventarul sa nu uit sa adaug arma primita in inventar!!;
+                                            cout << "Monstrul a dropat " << m -> getLoot() << " !\n";
+                                            Arme a = m -> dropeazaArma();
+                                            erou.adaugaArma(a);
+                                        }
+                                        if (typeid(*m) == typeid(MonstruGheata))
+                                        {
+                                            cout << "Monstrul a dropat " << m -> getLoot() << " !\n";
+                                            Armura a = m -> dropeazaArmura();
+                                            erou.adaugaArmura(a);
                                         }
                                         Dungeon.pop();
                                     }
-                                    if (erou.getViata() <= 0) erou.setStare(Mort);
+                                    if (erou.getViata() <= 0) {
+                                        erou.setStare(Mort);
+                                        cout << "Ai murit!\n";
+                                    };
                                 }
                                 else throw NivelMicException();
                             }
